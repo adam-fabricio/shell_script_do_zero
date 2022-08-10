@@ -1,0 +1,5 @@
+
+executei ls no loop 3
+executei gnome-calculator no loop 5
+executei killall gnome-calculator no loop 8
+Sim vivo, esperando comando.
