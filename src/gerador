@@ -1,0 +1,987 @@
+#!/bin/bash
+
+#Verifica se não é usuário root
+ROT=$(id -u)
+if [ "$ROT" = "0" ];then
+echo "O programa não funciona em modo root, por favor entre novamente"
+sleep 1
+exit
+fi
+
+######################################################################################################################################################################
+######################################################################################################################################################################
+######################################################################### FUNÇÃO QUE INSTALA O PROTEC ################################################################
+######################################################################################################################################################################
+instala(){
+
+echo
+echo "Instalando o Protec"
+echo
+echo "Digite o comando do player que deseja usar o protec"
+read plai
+
+# Resolvendo o comando do realplayer
+if [ "$plai" = "realplayer" ];then
+plai=$"realplay"
+fi
+
+echo
+echo
+echo "Qual é o comando do seu Screensaver?"
+echo
+echo "1- mate-screensaver"
+echo "2- gnome-screensaver"
+echo "3- XScreensaver"
+echo "4- Outro" 
+read distro1
+echo
+case $distro1 in
+
+1)
+SCREN=$"mate-screensaver";;
+2)
+SCREN=$"gnome-screensaver";;
+3)
+SCREN=$"xscreensaver";;
+4)
+echo "Digite o comando do seu screensaver"
+read SCREN;;
+*)
+echo "Opção invalida"
+exit;;
+esac
+
+echo "#! /bin/bash" > $HOME/criando
+
+echo 'plai=$'"'$plai'" >> $HOME/criando
+
+echo 'SCREN=$'"'$SCREN'" >> $HOME/criando
+
+echo '
+#Matando o screensaver
+killall $SCREN
+###############################################################################
+#Chama o player e dá prosseguimento ao script
+$plai &
+
+#com o sleep, o prosseguimento funciona
+sleep 2
+
+#loop infinito que fica verificando se o player ainda esta aberto, quando fechado ele chama o screensaver de volta e sai
+for (( loop=2;loop>1;loop++))
+   do
+
+#determina a velocidade em que o script verifica
+sleep 90' >> $HOME/criando
+
+#colhendo o nome do player
+echo 'plai=$'"'$plai'" >> $HOME/criando
+echo 'SCREN=$'"'$SCREN'" >> $HOME/criando
+echo '
+####################################################################### verificando se o player esta rodando ##############################################
+#dá valor zero aos pids para que o ultimo if funcione
+PIDD=$"0"
+PIDD2=$"0"
+PIDD3=$"0"
+
+#se a primeira linha do ps retornar vazio ou entao um processo zumbi ele nao entra e PIDD continua sendo zero
+ps -C $plai -o s= > $HOME/.estado
+ESTADO=$(cat $HOME/.estado | sed -e 2,9d)
+if [ "$ESTADO" = "S" -o "$ESTADO" = "R" ];then
+   PIDD=$"1"
+fi
+
+#se a segunda linha do ps retornar vazio ou entao um processo zumbi ele nao entra e PIDD2 continua sendo zero
+ESTADO2=$(cat $HOME/.estado | sed -e 1d -e 3,9d)
+if [ "$ESTADO2" = "S" -o "$ESTADO2" = "R" ];then
+   PIDD2=$"1"
+fi
+
+#se a segunda linha do ps retornar vazio ou entao um processo zumbi ele nao entra e PIDD2 continua sendo zero
+ESTADO3=$(cat $HOME/.estado | sed -e 1,2d -e 4,9d)
+if [ "$ESTADO3" = "S" -o "$ESTADO3" = "R" ];then
+   PIDD3=$"1"
+fi
+
+#se os tres PIDD forem zero, quer dizer que o player nao esta mais ativo, entao ele chama o screen-saver (com "R" mesmo) e sai.
+if [ "$PIDD" = 0 -a "$PIDD2" = 0 -a "$PIDD3" = 0 ];then
+   $SCREN
+   exit
+fi
+done' >> $HOME/criando
+
+# Movendo e renomeando o script para o diretorio
+echo "Digite a senha para copiarmos o script para /usr/bin"
+sudo mv $HOME/criando /usr/bin/protec$plai
+sudo chmod 777 /usr/bin/protec$plai
+####################################################################################
+####################################################################################
+####################################################################################
+#################################################################################### _____________________________ ICONES
+
+#Copiando os icones embutidos
+mkdir $HOME/icones_exemplos
+chmod -R 777 $HOME/icones_exemplos
+cp /usr/share/icones_exemplos/* $HOME/icones_exemplos
+
+echo
+echo "Digite a opção do icone desejado, eles estão no" $HOME"/icones_exemplos (versão .deb)"
+echo "1- Para 1.png"
+echo "2- Para 2.png"
+echo "3- Para 3.png"
+echo "4- Para 4.png"
+echo "5- Para 5.png"
+echo "6- Para 6.png"
+echo "7- Vou escolher outro icone.png no meu pc"
+read ICON
+echo
+#copia o icone para a pasta e dando o valor para a variavel escrever no arquivo de atalho
+if [ "$ICON" = "1" -o "$ICON" = "2" -o "$ICON" = "3" -o "$ICON" = "4" -o "$ICON" = "5" -o "$ICON" = "6" ];then
+   sudo cp /usr/share/icones_exemplos/$ICON.png /usr/share/icons
+   ICON2=$ICON.png
+   else
+      if [ "$ICON" != "7" ];then
+         echo "Opção invalida"
+         # Deleta os arquivos criados nestes processo falho
+         rm -rf $HOME/icones_exemplos | sudo rm -rf /usr/bin/protec$plai
+         exit
+      fi
+      echo "Digite o endereço do icone desejado"
+      read ICON
+      sudo cp $ICON /usr/share/icons
+      echo
+      echo "Digite apenas o nome deste icone.png"
+      read ICON2
+fi
+
+rm -rf $HOME/icones_exemplos
+
+# Dando valor a variavel pacote
+pacote=$"protec$plai"
+
+############################################################################################# criando o atalho
+echo "[Desktop Entry]" > $HOME/$pacote.desktop
+echo "Name="$pacote >> $HOME/$pacote.desktop
+echo "Name[pt]="$pacote >> $HOME/$pacote.desktop
+echo "Name[pt_BR]="$pacote >> $HOME/$pacote.desktop
+
+echo "Comment=Pausa a proteção de tela enquanto você assiste seus videos" >> $HOME/$pacote.desktop
+echo "Comment[pt]=Pausa a proteção de tela enquanto você assiste seus videos" >> $HOME/$pacote.desktop
+echo "Comment[pt_BR]=Pausa a proteção de tela enquanto você assiste seus videos" >> $HOME/$pacote.desktop
+
+echo "Exec="$pacote %U >> $HOME/$pacote.desktop
+echo "Icon=/usr/share/icons/"$ICON2 >> $HOME/$pacote.desktop
+echo "Terminal=false" >> $HOME/$pacote.desktop
+echo "Type=Application" >> $HOME/$pacote.desktop
+echo "Categories=GTK;GNOME;AudioVideo;" >> $HOME/$pacote.desktop
+echo "StartupNotify=true" >> $HOME/$pacote.desktop
+
+echo "MimeType=video/webm;video/x-anim;video/x-avi;video/x-flc;video/x-fli;video/x-flic;video/x-flv;video/x-m4v;video/x-matroska;video/x-mpeg;video/x-ms-asf;video/x-ms-asx;video/x-msvideo;video/x-ms-wm;video/x-ms-wmv;video/x-ms-wmx;video/x-ms-wvx;video/x-nsv;video/x-ogm+ogg;video/x-theora+ogg;" >> $HOME/$pacote.desktop
+
+# Movendo o atalho para o diretório
+sudo mv $HOME/$pacote.desktop /usr/share/applications
+
+#################################################################################
+   echo
+   echo
+   echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+   echo "Confira no menu → multimidia → video, o seu novo programa"
+   echo
+echo "Digite 'i' para instalar em outro player ou 's' para sair"
+read prox
+if [ "$prox" = "i" ];then
+   instala
+   else
+      exit
+fi
+
+#Fechando a função
+}
+
+######################################################################################################################################################################
+######################################################################################################################################################################
+################################################################# FUNÇÃO QUE TESTA RODANDO  O PROTEC #################################################################
+######################################################################################################################################################################
+teste(){
+echo
+echo "Teste emulando o protec"
+echo
+echo "Qual é o comando do seu Screensaver?"
+echo
+echo "1- mate-screensaver"
+echo "2- gnome-screensaver"
+echo "3- XScreensaver"
+echo "4- Outro"
+
+read num
+case $num in
+
+1)
+SCREN=$"mate-screensaver"
+echo $SCREN > $HOME/.scren;;
+2)
+SCREN=$"gnome-screensaver"
+echo $SCREN > $HOME/.scren;;
+3)
+SCREN=$"xscreensaver"
+echo $SCREN > $HOME/.scren;;
+4)
+echo "Digite o comando do seu screensaver"
+read SCREN
+echo $SCREN > $HOME/.scren;;
+*)
+echo "Opção invalida"
+exit;;
+esac
+
+echo
+echo "                              Instruções"
+echo
+echo "Antes de começar, o screensaver deve estar LIGADO, verifique"
+echo
+echo "- Quando o programa começar a rodar o screensaver deve estar DESLIGADO"
+echo "- E quando você fechar o player, o screensaver deverá voltar"
+echo
+echo "Se os dois comportamentos conferirem, pode instalar tranquilo"
+echo 
+echo "[ENTER] ↓↓↓"
+read segue
+
+echo "Digite o comando do player a ser testado (não feche-o, só minimize)"
+read plai
+
+# Resolvendo o comando do realplayer
+if [ "$plai" = "realplayer" ];then
+plai=$"realplay"
+fi
+
+#transferindo o comando do player para o arquivo texto
+echo $plai > $HOME/.plai
+
+#Matando o screensaver
+killall $SCREN
+###############################################################################
+#Chama o player e dá prosseguimento ao script
+$plai &
+
+#com o sleep, o prosseguimento funciona
+sleep 2
+
+echo
+echo "O seu screensaver tem de estar morto, verifique (não feche o player) [ENTER] ↓↓↓"
+read segue
+
+#loop infinito que fica verificando se o player ainda esta aberto, quando fechado ele chama o screensaver de volta e sai
+for (( loop=2;loop>1;loop++))
+   do
+
+#colhendo o nome do player e screensaver
+plai=$(cat $HOME/.plai)
+SCREN=$(cat $HOME/.scren)
+####################################################################### verificando se o player esta rodando ##############################################
+#dá valor zero aos pids para que o ultimo if funcione
+PIDD=$"0"
+PIDD2=$"0"
+PIDD3=$"0"
+
+#se a primeira linha do ps retornar vazio ou entao um processo zumbi ele nao entra e PIDD continua sendo zero
+ps -C $plai -o s= > $HOME/.estado
+ESTADO=$(cat $HOME/.estado | sed -e 2,9d)
+if [ "$ESTADO" = "S" -o "$ESTADO" = "R" ];then
+   PIDD=$"1"
+fi
+
+#se a segunda linha do ps retornar vazio ou entao um processo zumbi ele nao entra e PIDD2 continua sendo zero
+ESTADO2=$(cat $HOME/.estado | sed -e 1d -e 3,9d)
+if [ "$ESTADO2" = "S" -o "$ESTADO2" = "R" ];then
+   PIDD2=$"1"
+fi
+
+#se a segunda linha do ps retornar vazio ou entao um processo zumbi ele nao entra e PIDD2 continua sendo zero
+ESTADO3=$(cat $HOME/.estado | sed -e 1,2d -e 4,9d)
+if [ "$ESTADO3" = "S" -o "$ESTADO3" = "R" ];then
+   PIDD3=$"1"
+fi
+
+#se os tres PIDD forem zero, quer dizer que o player nao esta mais ativo, entao ele chama o screensaver e sai.
+if [ "$PIDD" = 0 -a "$PIDD2" = 0 -a "$PIDD3" = 0 ];then
+   $SCREN
+   sleep 1
+   echo
+   echo "Você fechou o player, o screensaver tem de voltar, por favor confirme"
+   echo "[ENTER] ↓↓↓"
+   read segue
+   echo
+# Deletando os arquivos criados neste processo terminado
+rm -rf $HOME/.plai | rm -rf $HOME/.scren | rm -rf $HOME/.estado
+   echo "Digite:" 
+   echo "1- Para instalar"
+   echo "2- Para ajuda"
+   echo "3- Para sair"
+   read prox
+   echo
+
+case $prox in
+
+1) instala;;
+2) ajuda;;
+3)
+echo "Seu linux vai parar a proteção de tela enquanto você assiste seus videos"
+echo "Funciona em qualquer player, Adeus bug!"
+sleep 2
+exit;;
+*) 
+echo "Opção invalida"
+exit;;
+esac
+
+fi
+
+echo
+echo "." $loop rodando.
+sleep 2
+echo ".." "O" $plai "esta aberto e o screensaver ainda deve estar fechado, verifique"
+sleep 2
+echo "..." "Quando quiser feche o" $plai "assim, o screensaver tem de voltar, verifique"
+sleep 2 # Determinando a velocidade do loop do teste
+done
+
+}
+######################################################################################################################################################################
+######################################################################################################################################################################
+##################################################################### FUNÇÃO DE AJUDA ################################################################################
+######################################################################################################################################################################
+
+ajuda(){
+
+# OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO IF gigante, encontra e testa o comando do screensaver
+   echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+   echo "Aqui te ajudo a encontrar o comando certo do screensaver"
+   echo
+   echo "Em alguma parte do texto abaixo, esta o comando procurado (ignore depois do grep)"
+   echo
+   LISTA_SCREN=$(ps -e -o command= | grep screensaver)
+   echo $LISTA_SCREN
+#se o resultado for vazio ele sai da ajuda
+      if [ "$LISTA_SCREN" = "" ];then
+         echo
+         echo "O screensaver esta fechado, não posso ajudar, [ENTER] ↓↓↓"
+         sleep 2
+         exit
+      else
+      #para cair no while caso o ps nao tenha sido vazio
+      WILE1=$"n"
+      fi
+#fica rodando no loop até acharmos o comando correto ou o usuario pedir para sair
+      while [ "$WILE1" = "n" ];do 
+		 echo
+         echo "Digite o comando do screensaver para tentarmos fecha-lo"
+	     echo
+         read TESTA
+         killall $TESTA
+         echo "--------------------------------------"
+         echo "Agora o screensaver tem de estar morto, olhe no monitor do sistema"
+         echo "Deu certo?"
+         echo "'n' para não ou 's' para sim"
+         read WILE1
+      done
+
+# se o primeiro teste for ok, ele chama o screensaver de volta
+		       $TESTA
+               echo
+               echo "Agora o screensaver deve ter voltado, confira, [ENTER] ↓↓↓"
+               read segue
+         
+echo
+echo "Se deu certo descobrimos o comando do screensaver para instalarmos ou testarmos"
+echo
+echo "O que vamos fazer agora?"
+echo
+echo "1 - Para instalar o Protec"
+echo "2 - Para instalar o Protec Continuo"
+echo "3 - Para testar o comando rodando o programa"
+echo "4 - Para sair"
+echo
+
+read ajuda_case
+case $ajuda_case in
+1) instala;;
+2) continuo;;
+3)
+echo "Digite 'c' para emular o proteccontinuo ou 'p' para o Protec"
+read prox
+if [ "$prox" = "c" ];then
+   emula
+      else
+         teste
+fi;;
+4) exit;;
+*)
+echo "Opção invalida"
+exit;;
+esac
+
+}
+
+######################################################################################################################################################################
+######################################################################################################################################################################
+######################################################################### EMULA O PROTEC (CONTINUO ) #################################################################
+######################################################################################################################################################################
+emula(){
+
+echo "Testando o Protec continuo"
+echo
+echo "Qual é o comando do seu Screensaver?"
+echo
+echo "1- mate-screensaver"
+echo "2- gnome-screensaver"
+echo "3- XScreensaver"
+echo "4- Outro"                   
+read cont
+echo
+case $cont in
+
+1)
+SCREN=$"mate-screensaver"
+echo $SCREN > $HOME/.scren;;
+2)
+SCREN=$"gnome-screensaver"
+echo $SCREN > $HOME/.scren;;
+3)
+SCREN=$"xscreensaver"
+echo $SCREN > $HOME/.scren;;
+4)
+echo "Digite o comando do seu screensaver"
+read SCREN
+echo $SCREN > $HOME/.scren;;
+*)
+echo "Opção invalida"
+exit;;
+esac
+
+#Atribuindo valor 1 para os dois loops, e dando permissão
+echo 1 > $HOME/.LOOP_IF1 | echo 1 > $HOME/.LOOP_IF2 | echo 1 > $HOME/.estado
+chmod 777 $HOME/.LOOP_IF1 | chmod 777 $HOME/.LOOP_IF2 | chmod 777 $HOME/.estado
+
+echo "Com qual player deseja testar?"
+read plai
+
+# Resolvendo o comando do realplayer
+if [ "$plai" = "realplayer" ];then
+plai=$"realplay"
+fi
+
+echo $plai > $HOME/.plai
+
+#chamando o player
+$plai &
+sleep 2
+
+#loop infinito que fica verificando se o player ainda esta aberto, quando fechado ele chama o screensaver de volta
+for (( loop=2;loop>1;loop++))
+   do
+
+SCREN=$(cat $HOME/.scren)
+plai=$(cat $HOME/.plai)
+
+####################################################################### verificando se o player esta rodando ##############################################
+#dá valor zero aos pids para que o ultimo if funcione
+PIDD=$"0"
+PIDD2=$"0"
+PIDD3=$"0"
+
+#se a primeira linha do ps retornar vazio ou entao um processo zumbi ele nao entra e PIDD continua sendo zero
+ps -C $plai -o s= > $HOME/.estado
+ESTADO=$(cat $HOME/.estado | sed -e 2,9d)
+if [ "$ESTADO" = "S" -o "$ESTADO" = "R" ];then
+   PIDD=$"1"
+fi
+
+#se a segunda linha do ps retornar vazio ou entao um processo zumbi ele nao entra e PIDD2 continua sendo zero
+ESTADO2=$(cat $HOME/.estado | sed -e 1d -e 3,9d)
+if [ "$ESTADO2" = "S" -o "$ESTADO2" = "R" ];then
+   PIDD2=$"1"
+fi
+
+#se a segunda linha do ps retornar vazio ou entao um processo zumbi ele nao entra e PIDD2 continua sendo zero
+ESTADO3=$(cat $HOME/.estado | sed -e 1,2d -e 4,9d)
+if [ "$ESTADO3" = "S" -o "$ESTADO3" = "R" ];then
+   PIDD3=$"1"
+fi
+
+#se os tres PIDD forem zero, quer dizer que o player nao esta mais ativo, entao ele chama o screensaver.
+if [ "$PIDD" = 0 -a "$PIDD2" = 0 -a "$PIDD3" = 0 ];then
+P1=$"of"
+else
+P1=$"on"
+fi
+
+######################################################################## MATA E VOLTA COM O SCREENSAVER ################################################################
+
+                                                                         # IF 1  ALGUM PLAYER LIGADO
+LOOP_IF1=$(cat $HOME/.LOOP_IF1)
+LOOP_IF2=$(cat $HOME/.LOOP_IF2)
+if [ "$P1" != "of" ];then
+
+while [ $LOOP_IF1 -eq 1 ];do
+   killall $SCREN
+   LOOP_IF1=$[ $LOOP_IF1 + 1 ]
+   echo $LOOP_IF1 > $HOME/.LOOP_IF1
+#Resetando o loop do if 2
+echo 1 > $HOME/.LOOP_IF2
+done
+fi
+                                                                        # IF 2  PLAYERS DESLIGADOS
+if [ "$P1" = "of" ];then
+
+while [ $LOOP_IF2 -eq 1 ];do
+   $SCREN
+   LOOP_IF2=$[ $LOOP_IF2 + 1 ]
+   echo $LOOP_IF2 > $HOME/.LOOP_IF2
+#Resetando o loop do if 1
+echo 1 > $HOME/.LOOP_IF1
+done
+fi
+
+echo
+echo $loop
+echo "Repare se o screensaver fica fechado quando o player estiver aberto"
+echo "E se ele volta (+- 5 segundos) depois que você fechar o player"
+echo 
+echo "Feche e abra quantas vezes quiser, depois dê control + c e me inicie novamente"
+echo "...................................."
+
+#determina a velocidade em que o script verifica
+sleep 5
+
+done
+}
+######################################################################################################################################################################
+######################################################################################################################################################################
+####################################################### FUNÇÃO QUE O PROTEC FICA RODANDO (CONTINUO ) #################################################################
+######################################################################################################################################################################
+continuo(){
+echo
+echo "****************************************"
+echo "Aqui instalamos o protec continuo"
+echo 
+echo "Players compativeis:    mplayer               |   xine"
+echo "                        vlc                   |   xmms2"
+echo "                        totem                 |   kaffeine"
+echo "                        miro                  |   phonon"
+echo "                        realplayer            |   helix"
+echo "                        xbmc                  |"
+echo
+echo "[ENTER] ↓↓↓"
+read segue
+##################################################################################### ADICIONANDO OUTROS PLAYERS
+echo
+echo "Digite a opção desejada"
+echo
+echo "1- Para deixar os players que estão"
+echo "2- Para adicionar algum player"
+echo "3- Instalar otimizado com poucos players de sua escolha (recomendado)"
+read prox
+
+case $prox in
+
+1)
+#Lendo as variaveis dos players
+PLA1=$"mplayer"
+PLA2=$"vlc"
+PLA3=$"totem"
+PLA4=$"miro"
+PLA5=$"realplay"
+PLA6=$"xbmc"                    
+PLA7=$"xine"                     
+PLA8=$"xmms2"
+PLA9=$"kaffeine"
+PLA10=$"helix"
+PLA11=$"phonon"
+x=$"11";;
+
+2)
+#Lendo as variaveis antes de mudar o valor só de uma
+PLA1=$"mplayer"
+PLA2=$"vlc"
+PLA3=$"totem"
+PLA4=$"miro"
+PLA5=$"realplay"
+PLA6=$"xbmc"                    
+PLA7=$"xine"                     
+PLA8=$"xmms2"
+PLA9=$"kaffeine"
+PLA10=$"helix"
+PLA11=$"phonon"
+
+WILE9=$"s"
+#Pega o valor do player a ser substituido, pega quantos a pessoa quiser
+while [ "$WILE9" = "s" ];do 
+   echo
+   echo "Temos que colocar no lugar de outro player da lista"
+   echo "1- Para mplayer e similares      |            7- Para xine"
+   echo "2- Para vlc                      |            8- Para xmms2"
+   echo "3- Para totem                    |            9- Para kaffeine"
+   echo "4- Para miro                     |            10- Para helix"
+   echo "5- Para realplayer               |            11- Para phonon e similares"
+   echo "6- Para xbmc                     |"          
+
+   echo
+   echo "Digite o numero do player a ser substituido, nunca repita a opção"
+   read y
+   echo
+   echo "Digite o comando do novo player"
+   read PLA$y
+   echo
+   echo "Deseja adicionar outro player ?"
+   echo "'n' para não ou 's' para sim"
+   read WILE9
+done
+x=$"11";;
+
+3)
+echo
+echo "Digite a quantidade de players que deseja ter no programa (máximo de 11)"
+read x
+y=$"0"
+
+until [ $y -eq $x ];do
+y=$[$y+1]
+
+echo
+echo "Digite o comando do player $y"
+read PLA$y
+done;;
+#fechando o case maior
+esac 
+############################################################## VENDO QUAL É O SCREENSAVER
+echo
+echo "Qual é o comando do seu Screensaver?"
+echo
+echo "1- mate-screensaver"
+echo "2- gnome-screensaver"
+echo "3- XScreensaver"
+echo "4- Outro"                   
+read distro
+echo
+case $distro in
+
+1)
+SCREN=$"mate-screensaver";;
+2)
+SCREN=$"gnome-screensaver";;
+3)
+SCREN=$"xscreensaver";;
+4)
+echo "Digite o comando do seu screensaver"
+read SCREN;;
+*)
+echo "Opção invalida"
+exit;;
+esac
+
+###############################################################################################################
+#################################################### ESCREVE O SCRIPT CONTINUO ###########################################################
+###############################################################################################################
+
+#Atribuindo valor 1 para os dois loops, e dando permissão ################################ ESTAS OPÇÕES DEVEM CONSTAR NO CONTINUO CASO EU FAÇA UM .DEB
+echo 1 > $HOME/.LOOP_IF1 | echo 1 > $HOME/.LOOP_IF2 | echo 1 > $HOME/.estado
+chmod 777 $HOME/.LOOP_IF1 | chmod 777 $HOME/.LOOP_IF2 | chmod 777 $HOME/.estado
+
+echo "#! /bin/bash" > $HOME/proteccontinuo
+
+echo '
+#loop infinito que fica verificando se o player ainda esta aberto, quando fechado ele chama o screensaver de volta
+for (( loop=2;loop>1;loop++))
+   do' >> $HOME/proteccontinuo
+
+echo 'SCREN=$'"'$SCREN'" >> $HOME/proteccontinuo
+
+echo '
+#determina a velocidade em que o script verifica
+sleep 170' >> $HOME/proteccontinuo
+
+w=$"0"
+#loop que gera a segunda parte do continuo ******************************************************************* UNTIL
+until [ $w -eq $x ];do
+w=$[$w+1]
+echo $w
+
+echo '
+##############################################################################################################################################################
+##############################################################################################################################################################
+##############################################################################################################################################################
+##############################################################################################################################################################
+##############################################################################################################################################################
+#recebe o comando do player' >> $HOME/proteccontinuo
+
+case $w in
+1) echo 'plai=$'"'$PLA1'" >> $HOME/proteccontinuo;;
+2) echo 'plai=$'"'$PLA2'" >> $HOME/proteccontinuo;;
+3) echo 'plai=$'"'$PLA3'" >> $HOME/proteccontinuo;;
+4) echo 'plai=$'"'$PLA4'" >> $HOME/proteccontinuo;;
+5) echo 'plai=$'"'$PLA5'" >> $HOME/proteccontinuo;;
+6) echo 'plai=$'"'$PLA6'" >> $HOME/proteccontinuo;;
+7) echo 'plai=$'"'$PLA7'" >> $HOME/proteccontinuo;;
+8) echo 'plai=$'"'$PLA8'" >> $HOME/proteccontinuo;;
+9) echo 'plai=$'"'$PLA9'" >> $HOME/proteccontinuo;;
+10) echo 'plai=$'"'$PLA10'" >> $HOME/proteccontinuo;;
+11) echo 'plai=$'"'$PLA11'" >> $HOME/proteccontinuo;;
+esac
+
+echo '
+####################################################################### verificando se o player esta rodando ##############################################
+#dá valor zero aos pids para que o ultimo if funcione
+PIDD=$"0"
+PIDD2=$"0"
+PIDD3=$"0"
+
+#se a primeira linha do ps retornar vazio ou entao um processo zumbi ele nao entra e PIDD continua sendo zero
+ps -C $plai -o s= > $HOME/.estado
+ESTADO=$(cat $HOME/.estado | sed -e 2,9d)
+if [ "$ESTADO" = "S" -o "$ESTADO" = "R" ];then
+   PIDD=$"1"
+fi
+
+#se a segunda linha do ps retornar vazio ou entao um processo zumbi ele nao entra e PIDD2 continua sendo zero
+ESTADO2=$(cat $HOME/.estado | sed -e 1d -e 3,9d)
+if [ "$ESTADO2" = "S" -o "$ESTADO2" = "R" ];then
+   PIDD2=$"1"
+fi
+
+#se a segunda linha do ps retornar vazio ou entao um processo zumbi ele nao entra e PIDD2 continua sendo zero
+ESTADO3=$(cat $HOME/.estado | sed -e 1,2d -e 4,9d)
+if [ "$ESTADO3" = "S" -o "$ESTADO3" = "R" ];then
+   PIDD3=$"1"
+fi
+
+#se os tres PIDD forem zero, quer dizer que o player nao esta mais ativo, entao ele chama o screensaver.
+if [ "$PIDD" = 0 -a "$PIDD2" = 0 -a "$PIDD3" = 0 ];then' >> $HOME/proteccontinuo
+echo P${w}'=$"of"' >> $HOME/proteccontinuo     #P1=$"of"
+echo 'else' >> $HOME/proteccontinuo
+echo P${w}'=$"on"' >> $HOME/proteccontinuo     #P1=$"on"
+echo 'fi' >> $HOME/proteccontinuo
+
+done
+
+echo '
+##############################################################################################################################################################
+##############################################################################################################################################################
+############################################################ MATA E VOLTA COM O SCREENSAVER ##################################################################
+##############################################################################################################################################################
+##############################################################################################################################################################
+                                                                        # IF 1  ALGUM PLAYER LIGADO
+LOOP_IF1=$(cat $HOME/.LOOP_IF1)
+LOOP_IF2=$(cat $HOME/.LOOP_IF2)' >> $HOME/proteccontinuo
+##############################################################################################################################################################    
+#################################################################################################################################### CONSTROI IF 1 ↓↓↓↓↓↓                   
+#escreve o if de acordo com a quantidade de players
+case $x in
+1) echo 'if [ "$P1" != "of" ];then' >> $HOME/proteccontinuo;;
+2) echo 'if [ "$P1" != "of" -o "$P2" != "of" ];then' >> $HOME/proteccontinuo;;
+3) echo 'if [ "$P1" != "of" -o "$P2" != "of" -o "$P3" != "of" ];then' >> $HOME/proteccontinuo;;
+4) echo 'if [ "$P1" != "of" -o "$P2" != "of" -o "$P3" != "of" -o "$P4" != "of" ];then' >> $HOME/proteccontinuo;;
+5) echo 'if [ "$P1" != "of" -o "$P2" != "of" -o "$P3" != "of" -o "$P4" != "of" -o "$P5" != "of" ];then' >> $HOME/proteccontinuo;;
+6) echo 'if [ "$P1" != "of" -o "$P2" != "of" -o "$P3" != "of" -o "$P4" != "of" -o "$P5" != "of" -o "$P6" != "of" ];then' >> $HOME/proteccontinuo;;
+7) echo 'if [ "$P1" != "of" -o "$P2" != "of" -o "$P3" != "of" -o "$P4" != "of" -o "$P5" != "of" -o "$P6" != "of" -o "$P7" != "of" ];then' >> $HOME/proteccontinuo;;
+8) echo 'if [ "$P1" != "of" -o "$P2" != "of" -o "$P3" != "of" -o "$P4" != "of" -o "$P5" != "of" -o "$P6" != "of" -o "$P7" != "of" -o "$P8" != "of" ];then' >> $HOME/proteccontinuo;;
+9) echo 'if [ "$P1" != "of" -o "$P2" != "of" -o "$P3" != "of" -o "$P4" != "of" -o "$P5" != "of" -o "$P6" != "of" -o "$P7" != "of" -o "$P8" != "of" -o "$P9" != "of" ];then' >> $HOME/proteccontinuo;;
+10) echo 'if [ "$P1" != "of" -o "$P2" != "of" -o "$P3" != "of" -o "$P4" != "of" -o "$P5" != "of" -o "$P6" != "of" -o "$P7" != "of" -o "$P8" != "of" -o "$P9" != "of" -o "$P10" != "of" ];then' >> $HOME/proteccontinuo;;
+11) echo 'if [ "$P1" != "of" -o "$P2" != "of" -o "$P3" != "of" -o "$P4" != "of" -o "$P5" != "of" -o "$P6" != "of" -o "$P7" != "of" -o "$P8" != "of" -o "$P9" != "of" -o "$P10" != "of" -o "$P11" != "of" ];then' >> $HOME/proteccontinuo;;
+esac
+##############################################################################################################################################################
+############################################################################################################################################################## 
+echo '
+while [ $LOOP_IF1 -eq 1 ];do
+   killall $SCREN
+   LOOP_IF1=$[ $LOOP_IF1 + 1 ]
+   echo $LOOP_IF1 > $HOME/.LOOP_IF1
+#Resetando o loop do if 2
+echo 1 > $HOME/.LOOP_IF2
+done
+fi
+                                                                        # IF 2  PLAYERS DESLIGADOS' >> $HOME/proteccontinuo
+##############################################################################################################################################################
+#################################################################################################################################### CONSTROI IF 2 ↓↓↓↓↓↓                   
+#escreve o if de acordo com a quantidade de players
+case $x in
+1) echo 'if [ "$P1" = "of" ];then' >> $HOME/proteccontinuo;;
+2) echo 'if [ "$P1" = "of" -a "$P2" = "of" ];then' >> $HOME/proteccontinuo;;
+3) echo 'if [ "$P1" = "of" -a "$P2" = "of" -a "$P3" = "of" ];then' >> $HOME/proteccontinuo;;
+4) echo 'if [ "$P1" = "of" -a "$P2" = "of" -a "$P3" = "of" -a "$P4" = "of" ];then' >> $HOME/proteccontinuo;;
+5) echo 'if [ "$P1" = "of" -a "$P2" = "of" -a "$P3" = "of" -a "$P4" = "of" -a "$P5" = "of" ];then' >> $HOME/proteccontinuo;;
+6) echo 'if [ "$P1" = "of" -a "$P2" = "of" -a "$P3" = "of" -a "$P4" = "of" -a "$P5" = "of" -a "$P6" = "of" ];then' >> $HOME/proteccontinuo;;
+7) echo 'if [ "$P1" = "of" -a "$P2" = "of" -a "$P3" = "of" -a "$P4" = "of" -a "$P5" = "of" -a "$P6" = "of" -a "$P7" = "of" ];then' >> $HOME/proteccontinuo;;
+8) echo 'if [ "$P1" = "of" -a "$P2" = "of" -a "$P3" = "of" -a "$P4" = "of" -a "$P5" = "of" -a "$P6" = "of" -a "$P7" = "of" -a "$P8" = "of" ];then' >> $HOME/proteccontinuo;;
+9) echo 'if [ "$P1" = "of" -a "$P2" = "of" -a "$P3" = "of" -a "$P4" = "of" -a "$P5" = "of" -a "$P6" = "of" -a "$P7" = "of" -a "$P8" = "of" -a "$P9" = "of" ];then' >> $HOME/proteccontinuo;;
+10) echo 'if [ "$P1" = "of" -a "$P2" = "of" -a "$P3" = "of" -a "$P4" = "of" -a "$P5" = "of" -a "$P6" = "of" -a "$P7" = "of" -a "$P8" = "of" -a "$P9" = "of" -a "$P10" = "of" ];then' >> $HOME/proteccontinuo;;
+11) echo 'if [ "$P1" = "of" -a "$P2" = "of" -a "$P3" = "of" -a "$P4" = "of" -a "$P5" = "of" -a "$P6" = "of" -a "$P7" = "of" -a "$P8" = "of" -a "$P9" = "of" -a "$P10" = "of" -a "$P11" = "of" ];then' >> $HOME/proteccontinuo;;
+esac
+##############################################################################################################################################################
+############################################################################################################################################################## 
+echo '
+while [ $LOOP_IF2 -eq 1 ];do
+   $SCREN
+   LOOP_IF2=$[ $LOOP_IF2 + 1 ]
+   echo $LOOP_IF2 > $HOME/.LOOP_IF2
+#Resetando o loop do if 1
+echo 1 > $HOME/.LOOP_IF1
+done
+fi
+
+done' >> $HOME/proteccontinuo 
+
+sleep 1
+chmod +x $HOME/proteccontinuo
+sudo mv $HOME/proteccontinuo /usr/bin/proteccontinuo
+
+#INSTALANDO O PROTECCONTINUO
+echo '[Desktop Entry]' > $HOME/proteccontinuo.desktop
+echo 'Type=Application' >> $HOME/proteccontinuo.desktop
+echo "Exec=$HOME/proteccontinuo" >> $HOME/proteccontinuo.desktop
+echo 'Hidden=false' >> $HOME/proteccontinuo.desktop
+echo 'X-GNOME-Autostart-enabled=true' >> $HOME/proteccontinuo.desktop
+echo 'Name[pt_BR]=proteccontinuo' >> $HOME/proteccontinuo.desktop
+echo 'Name=proteccontinuo' >> $HOME/proteccontinuo.desktop
+sleep 1
+
+sudo mv $HOME/proteccontinuo.desktop /etc/xdg/autostart/proteccontinuo.desktop
+
+#Chamando o proteccontinuo
+/usr/bin/proteccontinuo 1 > /dev/null 2> /dev/stdout &
+
+echo
+echo "Instalado com sucesso, ele verificará a cada 2,5 minutos"
+echo "Recomendavel deixar a proteção de tela no minimo em 3 minutos"
+echo
+echo "Ele já esta rodando !!!"
+sleep 1
+exit
+
+}
+
+######################################################################################################################################################################
+######################################################################################################################################################################
+######################################################################### MENU #######################################################################################
+######################################################################################################################################################################
+echo
+echo "                           Instalador Protec"
+echo
+echo "Resolve o bug em que a proteção de tela não é pausada ao assistir videos"
+sleep 2
+echo
+echo "1- Para instalar o Protec"
+echo "2- Para instalar o Protec Continuo"
+echo "3- Testar emulando"
+echo "4- Ajudo a encontrar o comando do screensaver (bem iniciante)"
+echo "5- Desinstalar"
+echo
+
+read inst
+case $inst in
+
+######################################################################################################################################################################
+######################################################################################################################################################################
+##################################################################### CHAMA A INSTALAÇÃO DO PROTEC ###################################################################
+######################################################################################################################################################################
+1)instala;;
+######################################################################################################################################################################
+######################################################################################################################################################################
+################################################################## CHAMA A INSTALAÇÃO DO PROTEC CONTINUO #############################################################
+######################################################################################################################################################################
+2)continuo;;
+######################################################################################################################################################################
+######################################################################################################################################################################
+########################################################################## CHAMA O EMULADOR ##########################################################################
+######################################################################################################################################################################
+3)
+echo
+echo "Digite 'c' para testar o Protec Continuo ou 'p' para testar o Protec"
+read prox
+
+# OPÇÃO INVALIDA
+if [ "$prox" != "p" -a "$prox" != "c" ];then
+echo
+echo "Opção invalida"
+exit
+fi
+
+if [ "$prox" = "c" ];then
+   emula
+      else
+         teste
+fi;;
+######################################################################################################################################################################
+######################################################################################################################################################################
+############################################################################# CHAMA A AJUDA ##########################################################################
+######################################################################################################################################################################
+4) ajuda;;
+######################################################################################################################################################################
+######################################################################################################################################################################
+####################################################################### CASE DESINSTALAR #############################################################################
+######################################################################################################################################################################
+5)
+echo "1- Desinstala o Protec Continuo"
+echo "2- Desinstala o Protec"
+echo
+read DES
+
+case $DES in
+
+1)
+sudo rm -rf /etc/xdg/autostart/proteccontinuo.desktop | rm -rf $HOME/.LOOP_IF1 | rm -rf $HOME/.LOOP_IF2 | rm -rf $HOME/.estado
+killall proteccontinuo
+sleep 1
+sudo rm -rf /usr/bin/proteccontinuo
+
+echo
+echo "Desinstalado com sucesso !!!"
+sleep 1
+exit;;
+
+2)
+WILE1=$"d"
+#fica rodando no loop até o usuário querer sair
+while [ "$WILE1" = "d" ];do	
+echo
+echo "Digite o comando do player a ser removido exemplo: vlc"
+read removo
+
+# Resolvendo o comando do realplayer
+if [ "$removo" = "realplayer" ];then
+removo=$"realplay"
+fi
+
+sudo apt-get remove protec$removo
+sudo rm -rf /usr/bin/protec$removo
+sudo rm -rf /usr/share/applications/protec$removo.desktop
+clear
+echo
+echo "Desinstalado com sucesso !!!"
+echo "Digite 'd' para desinstalar outro protec ou 's' para sair"
+read WILE1
+
+# OPÇÃO INVALIDA
+if [ "$WILE1" != "d" -a "$WILE1" != "s" ];then
+echo
+echo "Opção invalida"
+echo
+echo "Digite 'd' para desinstalar outro protec ou 's' para sair"
+read WILE1
+fi
+done;;
+
+*)
+echo "Opção invalida"
+sleep 1
+exit;; #fechando esta opção do case
+esac;; #fechando a opção 5 do case maior
+
+*)
+echo "Opção invalida"
+sleep 1
+exit;;
+
+# Fechando o case do menu principal
+esac
+exit
